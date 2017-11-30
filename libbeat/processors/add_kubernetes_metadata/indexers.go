@@ -119,17 +119,15 @@ func NewGenDefaultMeta(annotations, labels, labelsExclude []string) *GenDefaultM
 	}
 }
 
-// GenerateMetaData generates default metadata for the given pod taking to account certain filters
-func (g *GenDefaultMeta) GenerateMetaData(pod *Pod) common.MapStr {
+func (g *GenDefaultMeta) filterLabels(metadata *ObjectMeta) common.MapStr {
 	labelMap := common.MapStr{}
-	annotationsMap := common.MapStr{}
 
 	if len(g.labels) == 0 {
-		for k, v := range pod.Metadata.Labels {
+		for k, v := range metadata.Labels {
 			labelMap[k] = v
 		}
 	} else {
-		labelMap = generateMapSubset(pod.Metadata.Labels, g.labels)
+		labelMap = generateMapSubset(metadata.Labels, g.labels)
 	}
 
 	// Exclude any labels that are present in the exclude_labels config
@@ -137,13 +135,21 @@ func (g *GenDefaultMeta) GenerateMetaData(pod *Pod) common.MapStr {
 		delete(labelMap, label)
 	}
 
-	annotationsMap = generateMapSubset(pod.Metadata.Annotations, g.annotations)
+	return labelMap
+}
+
+// GenerateMetaData generates default metadata for the given pod taking to account certain filters
+func (g *GenDefaultMeta) GenerateMetaData(pod *Pod) common.MapStr {
+	labelMap := g.filterLabels(pod.Metadata)
+	annotationsMap := generateMapSubset(pod.Metadata.Annotations, g.annotations)
 
 	meta := common.MapStr{
 		"pod": common.MapStr{
 			"name": pod.Metadata.Name,
 		},
-		"namespace": pod.Metadata.Namespace,
+		"namespace": common.MapStr{
+			"name": pod.Metadata.Namespace,
+		},
 	}
 
 	if len(labelMap) != 0 {
@@ -152,6 +158,21 @@ func (g *GenDefaultMeta) GenerateMetaData(pod *Pod) common.MapStr {
 
 	if len(annotationsMap) != 0 {
 		meta["annotations"] = annotationsMap
+	}
+
+	// TODO only include namespaces metadata conditionally
+	if pod.NamespaceMetadata == nil {
+		return meta
+	}
+
+	nsLabelMap := g.filterLabels(pod.NamespaceMetadata)
+	if len(nsLabelMap) != 0 {
+		meta["namespace"]["labels"] = nsLabelMap
+	}
+
+	nsAnnotationsMap := generateMapSubset(pod.NamespaceMetadata.Annotations, g.annotations)
+	if len(nsAnnotationsMap) != 0 {}
+		meta["namespace"]["annotations"] = nsAnnotationsMap
 	}
 
 	return meta

@@ -22,6 +22,7 @@ type kubeAnnotatorConfig struct {
 	IncludeLabels      []string      `config:"include_labels"`
 	ExcludeLabels      []string      `config:"exclude_labels"`
 	IncludeAnnotations []string      `config:"include_annotations"`
+	// TODO conditionally include namespace labels and annotations
 }
 
 type Enabled struct {

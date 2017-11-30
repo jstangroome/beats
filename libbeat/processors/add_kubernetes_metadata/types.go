@@ -97,4 +97,6 @@ type Pod struct {
 	Metadata   ObjectMeta `json:"metadata"`
 	Spec       PodSpec    `json:"spec"`
 	Status     PodStatus  `json:"status"`
+
+	NamespaceMetadata *ObjectMeta `json:"-"`
 }

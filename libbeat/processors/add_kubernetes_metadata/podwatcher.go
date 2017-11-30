@@ -29,8 +29,9 @@ type PodWatcher struct {
 type annotationCache struct {
 	sync.RWMutex
 	annotations map[string]common.MapStr
-	pods        map[string]*Pod      // pod uid -> Pod
-	deleted     map[string]time.Time // deleted annotations key -> last access time
+	pods        map[string]*Pod       // pod uid -> Pod
+	deleted     map[string]time.Time  // deleted annotations key -> last access time
+	namespaces  map[string]*ObjectMeta // namespace name -> Namespace.Metadata
 }
 
 // NewPodWatcher initializes the watcher client to provide a local state of
@@ -75,6 +76,25 @@ func (p *PodWatcher) syncPods() error {
 	p.lastResourceVersion = pods.Metadata.GetResourceVersion()
 
 	logp.Info("kubernetes: %s", "Pod sync done")
+
+	return p.syncNamespaces()
+}
+
+func (p *PodWatcher) syncNamespaces() error {
+	logp.Info("kubernetes: %s", "Performing a namespace sync")
+	namespaces, err := p.kubeClient.CoreV1().ListNamespaces(p.ctx)
+
+	if err != nil {
+		return err
+	}
+
+	for _, ns := range namespaces.Items {
+		meta = GetNamespaceMetadata(ns)
+		p.annotationCache.namespaces[ns.Metadata.Name] = meta
+	}
+
+	logp.Info("kubernetes: %s", "Namespace sync done")
+
 	return nil
 }
 
@@ -169,6 +189,7 @@ func (p *PodWatcher) worker() {
 		if pod.Metadata.DeletionTimestamp != "" {
 			p.onPodDelete(pod)
 		} else {
+			p.addNamespaceMetadata(pod)
 			existing := p.GetPod(pod.Metadata.UID)
 			if existing != nil {
 				p.onPodUpdate(pod)
@@ -239,6 +260,36 @@ func (p *PodWatcher) GetPod(uid string) *Pod {
 	p.annotationCache.RLock()
 	defer p.annotationCache.RUnlock()
 	return p.annotationCache.pods[uid]
+}
+
+
+func (p *PodWatcher) addNamespaceMetadata(pod *Pod) {
+	pod.NamespaceMetadata = p.getNamespace(p.Metadata.Namespace)
+}
+
+func (p *PodWatcher) getNamespace(name string) *ObjectMeta {
+	p.annotationCache.RLock()
+	meta, ok := p.annotationCache.namespaces[name]
+	p.annotationCache.RUnlock()
+
+	if ok {
+		return meta
+	}
+
+	ns, err := p.kubeClient.CoreV1().GetNamespace(p.ctx, name)
+	if err {
+			logp.Err("kubernetes: get namespace error %v", err)
+			return
+	}
+
+	meta = GetNamespaceMetadata(ns)
+
+	p.annotationCache.Lock()
+	p.annotationCache.namespaces[name] = meta
+	// TODO avoid stale namespace metadata and unbounded growth
+	p.annotationCache.Unlock()
+
+	return meta
 }
 
 func (p *PodWatcher) Stop() {

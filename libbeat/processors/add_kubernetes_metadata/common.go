@@ -24,3 +24,20 @@ func GetPodMeta(pod *corev1.Pod) *Pod {
 
 	return po
 }
+
+func GetNamespaceMetadata(namespace *corev1.Namespace) *ObjectMeta {
+	bytes, err := json.Marshal(namespace.Metadata)
+	if err != nil {
+		logp.Warn("Unable to marshal %v", namespace.String())
+		return nil
+	}
+
+	meta := &ObjectMeta{}
+	err = json.Unmarshal(bytes, meta)
+	if err != nil {
+		logp.Warn("Unable to marshal %v", namespace.String())
+		return nil
+	}
+
+	return meta
+}

@@ -15,7 +15,7 @@
           description: >
             Kubernetes pod name
 
-        - name: namespace
+        - name: namespace.name
           type: keyword
           description: >
             Kubernetes namespace
