@@ -140,16 +140,18 @@ func (g *GenDefaultMeta) filterLabels(metadata *ObjectMeta) common.MapStr {
 
 // GenerateMetaData generates default metadata for the given pod taking to account certain filters
 func (g *GenDefaultMeta) GenerateMetaData(pod *Pod) common.MapStr {
-	labelMap := g.filterLabels(pod.Metadata)
+	labelMap := g.filterLabels(&pod.Metadata)
 	annotationsMap := generateMapSubset(pod.Metadata.Annotations, g.annotations)
+
+	namespace := common.MapStr{
+		"name": pod.Metadata.Namespace,
+	}
 
 	meta := common.MapStr{
 		"pod": common.MapStr{
 			"name": pod.Metadata.Name,
 		},
-		"namespace": common.MapStr{
-			"name": pod.Metadata.Namespace,
-		},
+		"namespace": namespace,
 	}
 
 	if len(labelMap) != 0 {
@@ -167,12 +169,12 @@ func (g *GenDefaultMeta) GenerateMetaData(pod *Pod) common.MapStr {
 
 	nsLabelMap := g.filterLabels(pod.NamespaceMetadata)
 	if len(nsLabelMap) != 0 {
-		meta["namespace"]["labels"] = nsLabelMap
+		namespace["labels"] = nsLabelMap
 	}
 
 	nsAnnotationsMap := generateMapSubset(pod.NamespaceMetadata.Annotations, g.annotations)
-	if len(nsAnnotationsMap) != 0 {}
-		meta["namespace"]["annotations"] = nsAnnotationsMap
+	if len(nsAnnotationsMap) != 0 {
+		namespace["annotations"] = nsAnnotationsMap
 	}
 
 	return meta

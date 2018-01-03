@@ -29,8 +29,8 @@ type PodWatcher struct {
 type annotationCache struct {
 	sync.RWMutex
 	annotations map[string]common.MapStr
-	pods        map[string]*Pod       // pod uid -> Pod
-	deleted     map[string]time.Time  // deleted annotations key -> last access time
+	pods        map[string]*Pod        // pod uid -> Pod
+	deleted     map[string]time.Time   // deleted annotations key -> last access time
 	namespaces  map[string]*ObjectMeta // namespace name -> Namespace.Metadata
 }
 
@@ -89,8 +89,8 @@ func (p *PodWatcher) syncNamespaces() error {
 	}
 
 	for _, ns := range namespaces.Items {
-		meta = GetNamespaceMetadata(ns)
-		p.annotationCache.namespaces[ns.Metadata.Name] = meta
+		meta := GetNamespaceMetadata(ns)
+		p.annotationCache.namespaces[*ns.Metadata.Name] = meta
 	}
 
 	logp.Info("kubernetes: %s", "Namespace sync done")
@@ -262,9 +262,8 @@ func (p *PodWatcher) GetPod(uid string) *Pod {
 	return p.annotationCache.pods[uid]
 }
 
-
 func (p *PodWatcher) addNamespaceMetadata(pod *Pod) {
-	pod.NamespaceMetadata = p.getNamespace(p.Metadata.Namespace)
+	pod.NamespaceMetadata = p.getNamespace(pod.Metadata.Namespace)
 }
 
 func (p *PodWatcher) getNamespace(name string) *ObjectMeta {
@@ -277,9 +276,9 @@ func (p *PodWatcher) getNamespace(name string) *ObjectMeta {
 	}
 
 	ns, err := p.kubeClient.CoreV1().GetNamespace(p.ctx, name)
-	if err {
-			logp.Err("kubernetes: get namespace error %v", err)
-			return
+	if err != nil {
+		logp.Err("kubernetes: get namespace error %v", err)
+		return nil
 	}
 
 	meta = GetNamespaceMetadata(ns)
