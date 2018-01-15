@@ -1,0 +1,14 @@
+.git/
+.github/
+auditbeat/
+deploy/
+dev-tools/
+docs/
+generator/
+heartbeat/
+metricbeat/
+packetbeat/
+script/
+testing/
+winlogbeat/
+Dockerfile

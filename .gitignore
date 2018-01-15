@@ -30,3 +30,5 @@ beat.db
 *.test
 *.prof
 *.pyc
+
+.kube/
