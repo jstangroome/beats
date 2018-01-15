@@ -52,6 +52,7 @@ func NewPodWatcher(kubeClient *k8s.Client, indexers *Indexers, syncPeriod, clean
 			annotations: make(map[string]common.MapStr),
 			pods:        make(map[string]*Pod),
 			deleted:     make(map[string]time.Time),
+			namespaces:  make(map[string]*ObjectMeta),
 		},
 	}
 }
